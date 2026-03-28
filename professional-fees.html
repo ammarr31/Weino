@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform Fees - Professional Portal</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo h1 {
+      font-size: 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .logo p {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .error-box {
+      background: #fee;
+      border: 1px solid #fcc;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      color: #c33;
+      text-align: center;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .info-card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .info-value {
+      font-weight: 600;
+      color: #333;
+      font-size: 1.1rem;
+    }
+    .info-value.highlight {
+      color: #667eea;
+      font-size: 1.3rem;
+    }
+    .payment-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      padding: 24px;
+      color: white;
+      margin-top: 24px;
+    }
+    .payment-section h2 {
+      font-size: 1.3rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .payment-info {
+      background: rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .payment-info p {
+      margin: 8px 0;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    .payment-info strong {
+      color: #fff;
+      font-weight: 600;
+    }
+    .copy-btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-top: 8px;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    .note {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 20px;
+      font-size: 0.85rem;
+      color: #856404;
+    }
+    .disabled-message {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    .disabled-message h2 {
+      color: #667eea;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <h1>💰 Platform Fees</h1>
+      <p>Professional Payment Portal</p>
+    </div>
+
+    <div id="error" class="error-box" style="display:none"></div>
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading your fee information...</p>
+    </div>
+    <div id="content" style="display:none"></div>
+  </div>
+
+  <script>
+    const API_BASE = 'https://us-central1-matchyto.cloudfunctions.net/api/v1';
+    
+    function showError(msg) {
+      document.getElementById('error').textContent = msg;
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'none';
+    }
+    
+    function getTokenFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('token');
+    }
+    
+    async function loadFeeInfo() {
+      const token = getTokenFromUrl();
+      if (!token) {
+        showError('Invalid access. Please open this page from the app.');
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${API_BASE}/professional/fee-info`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: { message: 'Access denied' } }));
+          throw new Error(err.error?.message || 'Failed to load fee information');
+        }
+        
+        const data = await res.json();
+        renderFeeInfo(data.data);
+      } catch (err) {
+        showError(err.message || 'Failed to load fee information');
+      }
+    }
+    
+    function renderFeeInfo(data) {
+      const content = document.getElementById('content');
+      
+      // Check if platform fees are enabled
+      if (!data.fees_enabled) {
+        content.innerHTML = `
+          <div class="disabled-message">
+            <h2>🔒 Platform Fees Not Active</h2>
+            <p>The platform fee system is currently disabled. You will be notified when it becomes active.</p>
+          </div>
+        `;
+        document.getElementById('loading').style.display = 'none';
+        content.style.display = 'block';
+        return;
+      }
+      
+      const currency = data.currency || 'EGP';
+      const currentPct = data.current_percentage || 0;
+      const recordedBookings = data.recorded_bookings || 0;
+      const recordedTotal = data.recorded_total || 0;
+      const confirmedTotal = data.confirmed_total || 0;
+      const amountDue = recordedTotal - confirmedTotal;
+      
+      content.innerHTML = `
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Your Current Fee Rate</span>
+            <span class="info-value highlight">${currentPct}%</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Recorded Bookings</span>
+            <span class="info-value">${recordedBookings}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Total Recorded Fees</span>
+            <span class="info-value">${currency} ${recordedTotal.toFixed(2)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Confirmed Payments</span>
+            <span class="info-value">${currency} ${confirmedTotal.toFixed(2)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Amount Due</span>
+            <span class="info-value highlight">${currency} ${amountDue.toFixed(2)}</span>
+          </div>
+        </div>
+        
+        ${amountDue > 0 ? `
+          <div class="payment-section">
+            <h2>💳 Payment Information</h2>
+            <div class="payment-info">
+              ${data.payment_phone ? `
+                <p><strong>Phone:</strong> ${escapeHtml(data.payment_phone)}</p>
+                <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(data.payment_phone)}')">📋 Copy Phone</button>
+              ` : ''}
+              ${data.payment_note ? `
+                <p style="margin-top:12px"><strong>Note:</strong> ${escapeHtml(data.payment_note)}</p>
+              ` : ''}
+            </div>
+            <p style="font-size:0.85rem;margin-top:12px;opacity:0.9">
+              Please transfer <strong>${currency} ${amountDue.toFixed(2)}</strong> and contact us to confirm your payment.
+            </p>
+          </div>
+        ` : `
+          <div class="info-card" style="text-align:center;color:#28a745">
+            <p style="font-size:1.1rem;font-weight:600">✅ No outstanding fees</p>
+            <p style="color:#666;margin-top:8px;font-size:0.9rem">You're all paid up!</p>
+          </div>
+        `}
+        
+        <div class="note">
+          <strong>⚠️ Important:</strong> Fees must be paid within the first 5 days of each month. Unpaid fees may result in temporary account suspension.
+        </div>
+      `;
+      
+      document.getElementById('loading').style.display = 'none';
+      content.style.display = 'block';
+    }
+    
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+    
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Copied to clipboard!');
+      }).catch(() => {
+        alert('Failed to copy. Please copy manually: ' + text);
+      });
+    }
+    
+    // Load on page load
+    loadFeeInfo();
+  </script>
+</body>
+</html>
